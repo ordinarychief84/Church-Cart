@@ -29,15 +29,19 @@ export async function verifyPaystackPayment(reference: string): Promise<PaymentV
 }
 
 /**
- * HMAC-SHA512 signature check used by the webhook handler. Returns true on
- * match. In dev with no secret configured, returns true so local testing works.
+ * HMAC-SHA512 signature check used by the webhook handler. Returns true ONLY
+ * when the signature header matches. We never silently accept unsigned
+ * requests — the only way to skip this is to omit the route entirely.
+ *
+ * In production, env validation already guarantees PAYSTACK_WEBHOOK_SECRET is
+ * set. In dev without a secret, we still require the header but verify against
+ * the literal "dev" key so devs at least have to construct a real signature
+ * before this passes — preventing a stray `curl` from flipping orders.
  */
 export function verifyPaystackSignature(rawBody: string, signature: string | null): boolean {
-  if (!env.PAYSTACK_WEBHOOK_SECRET) {
-    return env.NODE_ENV !== "production";
-  }
   if (!signature) return false;
-  const expected = createHmac("sha512", env.PAYSTACK_WEBHOOK_SECRET).update(rawBody).digest("hex");
+  const secret = env.PAYSTACK_WEBHOOK_SECRET || "dev";
+  const expected = createHmac("sha512", secret).update(rawBody).digest("hex");
   try {
     const a = Buffer.from(expected, "hex");
     const b = Buffer.from(signature, "hex");

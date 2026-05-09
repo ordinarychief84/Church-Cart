@@ -12,7 +12,11 @@ export default async function PickupHistoryPage() {
       churchBranchId: church.id,
       status: { in: ["PICKED_UP", "FAILED_PICKUP", "COMPLETED"] },
     },
-    include: { buyer: true, vendor: true, pickupRecord: true },
+    include: {
+      buyer: { select: { id: true, fullName: true } },
+      vendor: { select: { id: true, businessName: true } },
+      pickupRecord: true,
+    },
     orderBy: { updatedAt: "desc" },
   });
 

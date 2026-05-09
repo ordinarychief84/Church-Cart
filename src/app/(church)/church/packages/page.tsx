@@ -13,7 +13,14 @@ export default async function ChurchPackagesPage() {
       churchBranchId: church.id,
       status: { in: ["SHIPPED", "ARRIVED_AT_CHURCH", "READY_FOR_PICKUP"] },
     },
-    include: { buyer: true, items: true, vendor: true },
+    select: {
+      id: true,
+      status: true,
+      updatedAt: true,
+      buyer: { select: { id: true, fullName: true } },
+      vendor: { select: { id: true, businessName: true } },
+      items: { select: { id: true } },
+    },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -34,11 +41,11 @@ export default async function ChurchPackagesPage() {
                   {o.vendor.businessName} → {o.buyer.fullName}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Order #{o.id.slice(-6).toUpperCase()} · {o.items.length} item · Updated{" "}
-                  {formatDate(o.updatedAt)}
+                  Order #{o.id.slice(-6).toUpperCase()} · {o.items.length} item
+                  {o.items.length === 1 ? "" : "s"} · Updated {formatDate(o.updatedAt)}
                 </p>
-                <p className="mt-1 text-xs">
-                  Pickup code: <span className="font-mono">{o.pickupCode}</span>
+                <p className="mt-1 text-xs text-slate-400">
+                  The buyer will present a 6-digit code at pickup.
                 </p>
               </div>
               <OrderStatusBadge status={o.status} />

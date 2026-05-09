@@ -49,7 +49,12 @@ export function ChurchPicker({
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
       <input type="hidden" name="churchBranchId" value={chosen} />
-      <p className="mb-3 text-sm font-medium">Choose a pickup branch</p>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium">Choose a pickup branch</p>
+        {!chosen && (
+          <p className="text-xs text-amber-700">Pick a branch below before you continue</p>
+        )}
+      </div>
       <div className="grid gap-2 sm:grid-cols-4">
         <select
           value={denom}

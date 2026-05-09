@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PaymentStatus } from "@prisma/client";
+import { Prisma, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyPaystackSignature } from "@/lib/payments";
 import { applyOrderTransition } from "@/lib/orders/applyTransition";
@@ -20,26 +20,35 @@ export async function POST(req: Request) {
 
   if (event.event === "charge.success" && event.data?.reference) {
     const ref = event.data.reference;
-    const payment = await prisma.payment.findUnique({
-      where: { reference: ref },
-      include: { orders: true },
-    });
-    if (!payment) return NextResponse.json({ ok: true });
 
-    // Idempotent: skip if already succeeded
-    if (payment.status === PaymentStatus.SUCCEEDED) {
+    // Conditional update: only the first concurrent webhook delivery for a
+    // given reference will succeed. The `updateMany` is atomic at the DB
+    // level — we use the row count to decide whether to fan out transitions.
+    const claimed = await prisma.payment.updateMany({
+      where: { reference: ref, status: PaymentStatus.INITIATED },
+      data: {
+        status: PaymentStatus.SUCCEEDED,
+        verifiedAt: new Date(),
+        rawResponse: event as Prisma.InputJsonValue,
+      },
+    });
+    if (claimed.count === 0) {
       return NextResponse.json({ ok: true, idempotent: true });
     }
 
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: PaymentStatus.SUCCEEDED, verifiedAt: new Date(), rawResponse: event as never },
+    const payment = await prisma.payment.findUnique({
+      where: { reference: ref },
+      include: { orders: { select: { id: true } } },
     });
+    if (!payment) return NextResponse.json({ ok: true });
+
     for (const o of payment.orders) {
       try {
         await applyOrderTransition(o.id, { type: "PAYMENT_VERIFIED", actor: { kind: "system" } });
-      } catch {
-        // already past PENDING_PAYMENT — ignore
+      } catch (err) {
+        // Already past PENDING_PAYMENT — webhook re-delivery race. Log so an
+        // operator can investigate genuine bugs.
+        console.warn("[paystack-webhook] order transition skipped", o.id, err);
       }
     }
   }

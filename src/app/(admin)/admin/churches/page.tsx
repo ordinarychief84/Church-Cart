@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
+import { safeUserSelect } from "@/lib/auth/publicUser";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { ChurchRowActions } from "./ChurchRowActions";
@@ -7,7 +8,7 @@ import { ChurchRowActions } from "./ChurchRowActions";
 export default async function AdminChurchesPage() {
   await requireAdmin();
   const churches = await prisma.churchBranch.findMany({
-    include: { admin: true },
+    include: { admin: { select: safeUserSelect } },
     orderBy: { createdAt: "desc" },
   });
   return (

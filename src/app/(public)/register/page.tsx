@@ -55,7 +55,17 @@ export default function RegisterPage() {
             </div>
             <div>
               <Label htmlFor="phone">Phone (optional if email given)</Label>
-              <Input id="phone" name="phone" placeholder="+2348012345678" />
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="08012345678"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Nigerian numbers like 08012345678 work. We&apos;ll format it for you.
+              </p>
               {state.fieldErrors?.phone && (
                 <p className="mt-1 text-xs text-red-600">{state.fieldErrors.phone[0]}</p>
               )}

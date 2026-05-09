@@ -17,9 +17,22 @@ export default async function BuyerOrderDetail({ params }: { params: { id: strin
   const order = await prisma.order.findFirst({
     where: { id: params.id, buyerId: user.id },
     include: {
-      vendor: true,
+      vendor: { select: { id: true, businessName: true, slug: true } },
       items: true,
-      churchBranch: true,
+      churchBranch: {
+        select: {
+          id: true,
+          churchName: true,
+          branchName: true,
+          address: true,
+          city: true,
+          state: true,
+          contactPerson: true,
+          contactPhone: true,
+          operatingDays: true,
+          operatingHours: true,
+        },
+      },
       payment: true,
       statusHistory: { orderBy: { createdAt: "asc" } },
       dispute: true,

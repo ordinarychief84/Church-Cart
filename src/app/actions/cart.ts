@@ -5,30 +5,48 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireRole } from "@/lib/auth/guards";
 
-export async function addToCartAction(productId: string, quantity = 1): Promise<{ ok: true } | { error: string }> {
+export async function addToCartAction(
+  productId: string,
+  quantity = 1
+): Promise<{ ok: true } | { error: string }> {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?from=/products`);
   if (user.role !== "BUYER") return { error: "Only buyers can add to cart" };
 
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product || !product.available) return { error: "Product unavailable" };
-  if (product.inventoryQty <= 0) return { error: "Sold out" };
-  const qty = Math.max(1, Math.min(quantity, product.inventoryQty));
+  // All cart writes for a single user happen inside one transaction so the
+  // cumulative quantity is checked against current inventory atomically.
+  // Prevents the TOCTOU where two parallel "Add to cart" clicks each pass the
+  // pre-check then the increment overshoots stock.
+  const result = await prisma.$transaction(async (tx) => {
+    const product = await tx.product.findUnique({ where: { id: productId } });
+    if (!product || !product.available) return { error: "Product unavailable" } as const;
+    if (product.inventoryQty <= 0) return { error: "Sold out" } as const;
 
-  const cart = await prisma.cart.upsert({
-    where: { userId: user.id },
-    update: {},
-    create: { userId: user.id },
-  });
+    const cart = await tx.cart.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: { userId: user.id },
+    });
 
-  await prisma.cartItem.upsert({
-    where: { cartId_productId: { cartId: cart.id, productId } },
-    update: { quantity: { increment: qty }, priceKobo: product.priceKobo },
-    create: { cartId: cart.id, productId, quantity: qty, priceKobo: product.priceKobo },
+    const existing = await tx.cartItem.findUnique({
+      where: { cartId_productId: { cartId: cart.id, productId } },
+    });
+    const requested = (existing?.quantity ?? 0) + Math.max(1, quantity);
+    const newQty = Math.min(requested, product.inventoryQty);
+    if (newQty === existing?.quantity) {
+      return { error: `Only ${product.inventoryQty} in stock and you already have all of them.` } as const;
+    }
+
+    await tx.cartItem.upsert({
+      where: { cartId_productId: { cartId: cart.id, productId } },
+      update: { quantity: newQty, priceKobo: product.priceKobo },
+      create: { cartId: cart.id, productId, quantity: newQty, priceKobo: product.priceKobo },
+    });
+    return { ok: true } as const;
   });
 
   revalidatePath("/cart");
-  return { ok: true };
+  return result;
 }
 
 export async function updateCartItemAction(itemId: string, quantity: number) {

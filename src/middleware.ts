@@ -5,11 +5,14 @@ import type { Role } from "@prisma/client";
 
 const COOKIE_NAME = process.env.COOKIE_NAME || "cc_session";
 const ISSUER = process.env.JWT_ISSUER || "churchcart";
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "");
+const RAW_SECRET = process.env.JWT_SECRET;
+// Fail closed: if JWT_SECRET isn't configured, all sessions read as null.
+// `lib/env.ts` rejects boot when missing, so this is purely defensive.
+const SECRET = RAW_SECRET ? new TextEncoder().encode(RAW_SECRET) : null;
 
 async function readSessionFromRequest(req: NextRequest): Promise<{ uid: string; role: Role } | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token || !process.env.JWT_SECRET) return null;
+  if (!token || !SECRET) return null;
   try {
     const { payload } = await jwtVerify(token, SECRET, { issuer: ISSUER });
     if (typeof payload.uid === "string" && typeof payload.role === "string") {

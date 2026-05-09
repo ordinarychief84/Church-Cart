@@ -8,7 +8,15 @@ import { ResolveDisputeForm } from "./ResolveDisputeForm";
 export default async function AdminDisputesPage() {
   await requireAdmin();
   const disputes = await prisma.dispute.findMany({
-    include: { order: { include: { buyer: true, vendor: true } }, openedBy: true },
+    include: {
+      order: {
+        include: {
+          buyer: { select: { id: true, fullName: true } },
+          vendor: { select: { id: true, businessName: true } },
+        },
+      },
+      openedBy: { select: { id: true, fullName: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
   return (

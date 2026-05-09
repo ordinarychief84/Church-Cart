@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
+import { safeUserSelect } from "@/lib/auth/publicUser";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { VendorRowActions } from "./VendorRowActions";
@@ -7,7 +8,7 @@ import { VendorRowActions } from "./VendorRowActions";
 export default async function AdminVendorsPage() {
   await requireAdmin();
   const vendors = await prisma.vendorProfile.findMany({
-    include: { user: true, _count: { select: { products: true, orders: true } } },
+    include: { user: { select: safeUserSelect }, _count: { select: { products: true, orders: true } } },
     orderBy: { createdAt: "desc" },
   });
   return (

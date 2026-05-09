@@ -13,7 +13,20 @@ import { emit } from "@/lib/notifications";
 /**
  * Loads the order, runs the state machine, applies the new status + side
  * effects inside a single transaction, and writes the audit row.
+ *
+ * Concurrency safety: the actual status flip is a conditional `updateMany`
+ * that only matches when the row is still in the expected `fromStatus`.
+ * If two transitions race (e.g. buyer cancel + Paystack webhook verify),
+ * only the first commits; the loser throws OrderTransitionStaleError so
+ * the caller can choose to retry or surface "order changed" to the user.
  */
+export class OrderTransitionStaleError extends Error {
+  constructor(orderId: string, expected: OrderStatus) {
+    super(`Order ${orderId} is no longer in ${expected}; another transition won the race.`);
+    this.name = "OrderTransitionStaleError";
+  }
+}
+
 export async function applyOrderTransition(
   orderId: string,
   action: Action
@@ -36,10 +49,15 @@ export async function applyOrderTransition(
     const result = transitionOrderStatus(shape, action);
     const actorId = (action.actor as ActorRef).kind === "user" ? (action.actor as { id: string }).id : null;
 
-    await tx.order.update({
-      where: { id: order.id },
+    // Conditional flip — only succeeds if status is still the value we read
+    // above. Defends against concurrent transitions on the same order.
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: result.fromStatus },
       data: { status: result.toStatus },
     });
+    if (updated.count === 0) {
+      throw new OrderTransitionStaleError(order.id, result.fromStatus);
+    }
 
     await tx.orderStatusEvent.create({
       data: {
@@ -75,6 +93,9 @@ async function applySideEffect(
     case "create_payout": {
       const eligibleAt = new Date();
       eligibleAt.setHours(eligibleAt.getHours() + env.DISPUTE_WINDOW_HOURS);
+      // Don't re-extend the eligibility window if a payout already exists.
+      // We could land here on ADMIN_OVERRIDE → PICKED_UP and we don't want
+      // to push the vendor's payout date out.
       await tx.payout.upsert({
         where: { orderId: order.id },
         create: {
@@ -83,7 +104,7 @@ async function applySideEffect(
           amountKobo: order.vendorAmountKobo,
           eligibleAt,
         },
-        update: { eligibleAt },
+        update: {},
       });
       return;
     }
@@ -91,7 +112,10 @@ async function applySideEffect(
     case "restock": {
       const items = await tx.orderItem.findMany({ where: { orderId: order.id } });
       for (const item of items) {
-        await tx.product.update({
+        // Tolerate the product being soft-deleted: incrementing a missing row
+        // would throw P2025 and abort the whole cancellation transaction,
+        // which is worse than a slightly inaccurate inventory count.
+        await tx.product.updateMany({
           where: { id: item.productId },
           data: { inventoryQty: { increment: item.quantity } },
         });

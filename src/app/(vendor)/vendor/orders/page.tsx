@@ -13,7 +13,11 @@ export default async function VendorOrdersPage() {
   if (!vendor) return null;
   const orders = await prisma.order.findMany({
     where: { vendorId: vendor.id, status: { not: "PENDING_PAYMENT" } },
-    include: { items: true, buyer: true, churchBranch: true },
+    include: {
+      items: true,
+      buyer: { select: { id: true, fullName: true } },
+      churchBranch: { select: { id: true, churchName: true, branchName: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -31,7 +35,8 @@ export default async function VendorOrdersPage() {
                   Order #{o.id.slice(-6).toUpperCase()} · {o.buyer.fullName}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {o.items.length} item · {formatDate(o.createdAt)} ·{" "}
+                  {o.items.length} item{o.items.length === 1 ? "" : "s"} ·{" "}
+                  {formatDate(o.createdAt)} ·{" "}
                   {o.deliveryType === "CHURCH_PICKUP"
                     ? `Church pickup at ${o.churchBranch?.branchName}`
                     : "Home delivery"}

@@ -305,20 +305,22 @@ enum PickupOutcome {
 }
 
 model PickupRecord {
-  id               String        @id @default(cuid())
-  orderId          String        @unique
-  order            Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  churchBranchId   String
-  churchBranch     ChurchBranch  @relation(fields: [churchBranchId], references: [id])
-  arrivedAt        DateTime?
-  readyAt          DateTime?
-  pickedUpAt       DateTime?
-  failedAt         DateTime?
-  failureReason    String?
-  verifiedByUserId String?
-  outcome          PickupOutcome @default(PENDING)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                 String        @id @default(cuid())
+  orderId            String        @unique
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  churchBranchId     String
+  churchBranch       ChurchBranch  @relation(fields: [churchBranchId], references: [id])
+  arrivedAt          DateTime?
+  readyAt            DateTime?
+  pickedUpAt         DateTime?
+  failedAt           DateTime?
+  failureReason      String?
+  verifiedByUserId   String?
+  failedVerifyCount  Int           @default(0)
+  lockedUntil        DateTime?
+  outcome            PickupOutcome @default(PENDING)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   @@index([churchBranchId, outcome])
 }

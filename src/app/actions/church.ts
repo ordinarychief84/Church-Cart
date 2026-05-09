@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/guards";
 import { churchBranchSchema } from "@/lib/validation/church";
@@ -33,15 +34,16 @@ export async function upsertChurchBranchAction(_prev: Result, formData: FormData
       where: { adminUserId: user.id },
       data: { ...parsed.data },
     });
-  } else {
-    await prisma.churchBranch.create({
-      data: {
-        ...parsed.data,
-        adminUserId: user.id,
-        slug: uniqueSlug(`${parsed.data.churchName} ${parsed.data.branchName}`),
-      },
-    });
+    revalidatePath("/church/settings");
+    return { ok: true };
   }
-  revalidatePath("/church/settings");
-  return { ok: true };
+  await prisma.churchBranch.create({
+    data: {
+      ...parsed.data,
+      adminUserId: user.id,
+      slug: uniqueSlug(`${parsed.data.churchName} ${parsed.data.branchName}`),
+    },
+  });
+  revalidatePath("/church/dashboard");
+  redirect("/church/dashboard");
 }

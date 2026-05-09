@@ -56,15 +56,18 @@ export function ProductForm({ categories, mode, product }: Props) {
             </Select>
           </div>
           <div>
-            <Label htmlFor="priceKobo">Price (in kobo, e.g. 250000 = ₦2,500)</Label>
+            <Label htmlFor="priceNaira">Price (₦)</Label>
             <Input
-              id="priceKobo"
-              name="priceKobo"
+              id="priceNaira"
+              name="priceNaira"
               type="number"
-              min={1}
-              defaultValue={product?.priceKobo ?? ""}
+              min={0.01}
+              step={0.01}
+              inputMode="decimal"
+              defaultValue={product ? (product.priceKobo / 100).toFixed(2) : ""}
               required
             />
+            <p className="mt-1 text-xs text-slate-500">e.g. 2500.00 for ₦2,500</p>
           </div>
           <div>
             <Label htmlFor="inventoryQty">Inventory quantity</Label>

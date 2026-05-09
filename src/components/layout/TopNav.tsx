@@ -51,7 +51,7 @@ export async function TopNav() {
               <ShoppingCart size={18} />
               {cartCount > 0 && (
                 <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-700 px-1 text-[10px] font-bold text-white">
-                  {cartCount}
+                  {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}
             </Link>

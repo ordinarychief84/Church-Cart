@@ -71,19 +71,21 @@ export default async function HomePage() {
       </section>
 
       {/* Featured */}
-      <section className="mx-auto max-w-7xl px-4 py-12">
-        <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">New on churchCart</h2>
-          <Link href="/marketplace" className="text-sm font-medium text-brand-700 hover:underline">
-            View all →
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {featured.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </section>
+      {featured.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-12">
+          <div className="mb-6 flex items-end justify-between">
+            <h2 className="text-xl font-semibold tracking-tight">New on churchCart</h2>
+            <Link href="/marketplace" className="text-sm font-medium text-brand-700 hover:underline">
+              View all →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {featured.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }

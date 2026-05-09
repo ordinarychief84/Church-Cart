@@ -11,7 +11,13 @@ export default async function BuyerOrdersPage() {
   const user = await requireRole("BUYER");
   const orders = await prisma.order.findMany({
     where: { buyerId: user.id },
-    include: { vendor: true, items: true, churchBranch: true },
+    include: {
+      vendor: { select: { id: true, businessName: true, slug: true, status: true } },
+      items: true,
+      churchBranch: {
+        select: { id: true, churchName: true, branchName: true, city: true, state: true },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
   return (
@@ -36,7 +42,8 @@ export default async function BuyerOrdersPage() {
                   Order #{o.id.slice(-6).toUpperCase()}
                 </Link>
                 <p className="text-xs text-slate-500">
-                  {o.vendor.businessName} · {o.items.length} item · {formatDate(o.createdAt)}
+                  {o.vendor.businessName} · {o.items.length} item{o.items.length === 1 ? "" : "s"} ·{" "}
+                  {formatDate(o.createdAt)}
                 </p>
                 {o.churchBranch && (
                   <p className="text-xs text-slate-500">

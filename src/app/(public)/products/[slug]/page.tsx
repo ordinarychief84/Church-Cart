@@ -14,7 +14,11 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
       images: { orderBy: { position: "asc" } },
       vendor: true,
       category: true,
-      reviews: { include: { author: true }, orderBy: { createdAt: "desc" }, take: 5 },
+      reviews: {
+        include: { author: { select: { id: true, fullName: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
     },
   });
   if (!product || product.vendor.status !== "VERIFIED") notFound();

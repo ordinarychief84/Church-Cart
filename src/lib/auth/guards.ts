@@ -33,13 +33,19 @@ export async function requireRole(role: Role | Role[]): Promise<User> {
   return user;
 }
 
+/**
+ * Requires the caller to be a vendor with status=VERIFIED. Missing profile or
+ * pending/rejected status redirects to the vendor dashboard (which has the
+ * "pending verification" banner) or settings (when no profile exists yet).
+ *
+ * `redirect()` works in both server actions and page renders — the action
+ * caller still gets short-circuited cleanly.
+ */
 export async function requireVerifiedVendor(): Promise<{ user: User; vendor: VendorProfile }> {
   const user = await requireRole("VENDOR");
   const vendor = await prisma.vendorProfile.findUnique({ where: { userId: user.id } });
-  if (!vendor) throw new ForbiddenError("Vendor profile not found");
-  if (vendor.status !== VendorStatus.VERIFIED) {
-    throw new ForbiddenError("Vendor not yet verified");
-  }
+  if (!vendor) redirect("/vendor/settings");
+  if (vendor.status !== VendorStatus.VERIFIED) redirect("/vendor/dashboard");
   return { user, vendor };
 }
 
@@ -49,10 +55,8 @@ export async function requireApprovedChurchAdmin(): Promise<{
 }> {
   const user = await requireRole("CHURCH_ADMIN");
   const church = await prisma.churchBranch.findUnique({ where: { adminUserId: user.id } });
-  if (!church) throw new ForbiddenError("Church branch not found");
-  if (church.status !== ChurchStatus.APPROVED) {
-    throw new ForbiddenError("Church branch not yet approved");
-  }
+  if (!church) redirect("/church/settings");
+  if (church.status !== ChurchStatus.APPROVED) redirect("/church/dashboard");
   return { user, church };
 }
 

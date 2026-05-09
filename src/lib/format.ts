@@ -12,12 +12,15 @@ export function nairaToKobo(naira: number): number {
 
 export function formatDate(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
+  // Pin the timezone to Lagos so SSR and client renders agree (avoids
+  // hydration warnings) and the displayed time is what Nigerian users expect.
   return date.toLocaleString("en-NG", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Africa/Lagos",
   });
 }
 

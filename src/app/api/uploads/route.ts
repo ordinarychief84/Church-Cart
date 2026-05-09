@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { uploadImage } from "@/lib/storage";
+import { uploadImage, type UploadFolder } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/auth/guards";
 
 export const runtime = "nodejs";
+
+const ALLOWED_BY_ROLE: Record<UploadFolder, string[]> = {
+  products: ["VENDOR"],
+  vendors: ["VENDOR"],
+  churches: ["CHURCH_ADMIN"],
+};
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -10,10 +16,16 @@ export async function POST(req: Request) {
 
   const form = await req.formData();
   const file = form.get("file");
-  const folder = (form.get("folder") as string) || "products";
+  const folderRaw = (form.get("folder") as string) || "";
   if (!(file instanceof File)) return NextResponse.json({ error: "no_file" }, { status: 400 });
-  if (folder !== "products" && folder !== "vendors" && folder !== "churches") {
+  if (folderRaw !== "products" && folderRaw !== "vendors" && folderRaw !== "churches") {
     return NextResponse.json({ error: "bad_folder" }, { status: 400 });
+  }
+  const folder = folderRaw as UploadFolder;
+
+  const allowed = ALLOWED_BY_ROLE[folder];
+  if (!allowed.includes(user.role) && user.role !== "ADMIN") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   try {

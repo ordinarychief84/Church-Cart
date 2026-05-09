@@ -14,7 +14,11 @@ export default async function BuyerDashboard() {
   const user = await requireRole("BUYER");
   const orders = await prisma.order.findMany({
     where: { buyerId: user.id },
-    include: { items: true, vendor: true, churchBranch: true },
+    include: {
+      items: true,
+      vendor: { select: { id: true, businessName: true, slug: true } },
+      churchBranch: { select: { id: true, churchName: true, branchName: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: 8,
   });

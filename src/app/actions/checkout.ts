@@ -148,8 +148,26 @@ export async function createCheckoutAction(_prev: Result, formData: FormData): P
       const lines = items.map((i) => ({ priceKobo: i.priceKobo, quantity: i.quantity }));
       const totals = computeOrderTotals(lines, vendorQuotes.get(vendorId) ?? 0);
 
-      const pickup =
-        input.deliveryType === DeliveryType.CHURCH_PICKUP ? generatePickupCode() : null;
+      // 6-digit codes have only ~900k possibilities, so under load we can
+      // collide with an existing unique code. Retry up to 5 times before
+      // giving up — at which point something is very wrong.
+      let pickup: { code: string; token: string } | null = null;
+      if (input.deliveryType === DeliveryType.CHURCH_PICKUP) {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const candidate = generatePickupCode();
+          const taken = await tx.order.findUnique({
+            where: { pickupCode: candidate.code },
+            select: { id: true },
+          });
+          if (!taken) {
+            pickup = candidate;
+            break;
+          }
+        }
+        if (!pickup) {
+          throw new Error("Could not allocate a pickup code, please try again.");
+        }
+      }
 
       const order = await tx.order.create({
         data: {

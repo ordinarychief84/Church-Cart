@@ -8,7 +8,11 @@ import { formatDate } from "@/lib/format";
 export default async function AdminOrdersPage() {
   await requireAdmin();
   const orders = await prisma.order.findMany({
-    include: { vendor: true, buyer: true, churchBranch: true },
+    include: {
+      vendor: { select: { id: true, businessName: true } },
+      buyer: { select: { id: true, fullName: true, email: true } },
+      churchBranch: { select: { id: true, churchName: true, branchName: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
