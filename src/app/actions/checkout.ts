@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { Prisma, DeliveryType, PaymentStatus, OrderStatus } from "@prisma/client";
+import { DeliveryType, PaymentStatus, OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/guards";
 import { checkoutSchema } from "@/lib/validation/checkout";

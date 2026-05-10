@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Tags,
   Wallet,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ const ICONS = {
   AlertTriangle,
   Tags,
   Wallet,
+  Users,
 } as const;
 
 export type SidebarIconKey = keyof typeof ICONS;

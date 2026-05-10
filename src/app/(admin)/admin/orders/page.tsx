@@ -4,11 +4,17 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { Money } from "@/components/shared/Money";
 import { formatDate } from "@/lib/format";
+import { OrderOverrideButton } from "./OrderOverrideButton";
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
   const orders = await prisma.order.findMany({
-    include: {
+    select: {
+      id: true,
+      status: true,
+      totalKobo: true,
+      createdAt: true,
+      deliveryType: true,
       vendor: { select: { id: true, businessName: true } },
       buyer: { select: { id: true, fullName: true, email: true } },
       churchBranch: { select: { id: true, churchName: true, branchName: true } },
@@ -19,7 +25,10 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <PageHeader title="Orders" description={`${orders.length} most recent`} />
+      <PageHeader
+        title="Orders"
+        description={`${orders.length} most recent · admin can override status when an order gets stuck`}
+      />
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
@@ -31,6 +40,7 @@ export default async function AdminOrdersPage() {
               <th className="px-4 py-2">Total</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">When</th>
+              <th className="px-4 py-2">Override</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -44,9 +54,16 @@ export default async function AdminOrdersPage() {
                     ? `${o.churchBranch?.churchName} — ${o.churchBranch?.branchName}`
                     : "Home"}
                 </td>
-                <td className="px-4 py-3"><Money kobo={o.totalKobo} /></td>
-                <td className="px-4 py-3"><OrderStatusBadge status={o.status} /></td>
+                <td className="px-4 py-3">
+                  <Money kobo={o.totalKobo} />
+                </td>
+                <td className="px-4 py-3">
+                  <OrderStatusBadge status={o.status} />
+                </td>
                 <td className="px-4 py-3 text-xs text-slate-500">{formatDate(o.createdAt)}</td>
+                <td className="px-4 py-3">
+                  <OrderOverrideButton orderId={o.id} currentStatus={o.status} />
+                </td>
               </tr>
             ))}
           </tbody>

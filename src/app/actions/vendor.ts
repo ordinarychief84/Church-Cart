@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole, requireVerifiedVendor } from "@/lib/auth/guards";
 import { vendorProfileSchema, productSchema } from "@/lib/validation/vendor";
 import { uniqueSlug } from "@/lib/format";
-import { uploadImage } from "@/lib/storage";
+import { uploadImage, deleteImage } from "@/lib/storage";
 
 type Result = { ok?: true; error?: string; fieldErrors?: Record<string, string[]> };
 
@@ -186,5 +186,81 @@ export async function setProductAvailabilityAction(productId: string, available:
   if (!product) return { error: "Product not found" };
   await prisma.product.update({ where: { id: productId }, data: { available } });
   revalidatePath("/vendor/products");
+  return { ok: true } as const;
+}
+
+const MAX_IMAGES_PER_PRODUCT = 8;
+
+/**
+ * Adds new images to an existing product. Caps total at 8.
+ */
+export async function addProductImagesAction(_prev: Result, formData: FormData): Promise<Result> {
+  const { vendor } = await requireVerifiedVendor();
+  const productId = formData.get("productId");
+  if (typeof productId !== "string") return { error: "Missing product" };
+  const product = await prisma.product.findFirst({
+    where: { id: productId, vendorId: vendor.id },
+    include: { _count: { select: { images: true } } },
+  });
+  if (!product) return { error: "Product not found" };
+  const remaining = MAX_IMAGES_PER_PRODUCT - product._count.images;
+  if (remaining <= 0) return { error: `Already at the ${MAX_IMAGES_PER_PRODUCT}-image limit.` };
+
+  const files = formData
+    .getAll("images")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, remaining);
+  if (files.length === 0) return { error: "Pick at least one image" };
+
+  const uploads = await Promise.all(
+    files.map(async (f) => {
+      try {
+        return await uploadImage(f, "products");
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : "upload failed" } as const;
+      }
+    })
+  );
+  const valid = uploads.filter(
+    (u): u is { url: string; pathname: string } => !!u && !("error" in u)
+  );
+  if (valid.length === 0) return { error: "All uploads failed" };
+
+  await prisma.productImage.createMany({
+    data: valid.map((u, i) => ({
+      productId: product.id,
+      url: u.url,
+      position: product._count.images + i,
+    })),
+  });
+  revalidatePath(`/vendor/products/${productId}/edit`);
+  revalidatePath(`/products/${product.slug}`);
+  return { ok: true };
+}
+
+/**
+ * Deletes a single product image, removing it from Vercel Blob too.
+ */
+export async function deleteProductImageAction(imageId: string) {
+  const { vendor } = await requireVerifiedVendor();
+  const image = await prisma.productImage.findFirst({
+    where: { id: imageId, product: { vendorId: vendor.id } },
+    include: { product: { select: { id: true, slug: true } } },
+  });
+  if (!image) return { error: "Image not found" } as const;
+
+  // Best-effort: try to extract a Vercel Blob pathname from the URL.
+  // A real implementation would store pathname on ProductImage.
+  try {
+    const url = new URL(image.url);
+    const pathname = url.pathname.replace(/^\//, "");
+    if (pathname) await deleteImage(pathname);
+  } catch {
+    // ignored — if URL is not a Blob URL there is nothing to delete remotely.
+  }
+
+  await prisma.productImage.delete({ where: { id: imageId } });
+  revalidatePath(`/vendor/products/${image.product.id}/edit`);
+  revalidatePath(`/products/${image.product.slug}`);
   return { ok: true } as const;
 }

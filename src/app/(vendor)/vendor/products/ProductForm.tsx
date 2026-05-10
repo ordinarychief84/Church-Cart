@@ -24,12 +24,17 @@ type Props = {
   product?: Product & { images: ProductImage[] };
 };
 
+type ProductFormAction = (
+  prev: typeof initial,
+  formData: FormData
+) => Promise<typeof initial>;
+
 export function ProductForm({ categories, mode, product }: Props) {
-  const action =
+  const action: ProductFormAction =
     mode === "create"
       ? createProductAction
       : updateProductAction.bind(null, product!.id);
-  const [state, formAction] = useFormState(action as never, initial);
+  const [state, formAction] = useFormState(action, initial);
 
   return (
     <Card>

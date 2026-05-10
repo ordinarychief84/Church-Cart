@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { ChurchIcon } from "lucide-react";
@@ -32,7 +33,14 @@ export default async function PickupCodePage({ params }: { params: { id: string 
           <p className="my-4 font-mono text-4xl font-semibold tracking-[0.4em] text-slate-900">
             {order.pickupCode}
           </p>
-          <img src={qrDataUrl} alt="Pickup QR code" className="rounded" width={240} height={240} />
+          <Image
+            src={qrDataUrl}
+            alt="Pickup QR code"
+            width={240}
+            height={240}
+            unoptimized
+            className="h-auto w-full max-w-[240px] rounded"
+          />
           <p className="mt-4 text-sm text-slate-600">
             Show this code or the QR to a {order.churchBranch.churchName} staff member at:
           </p>

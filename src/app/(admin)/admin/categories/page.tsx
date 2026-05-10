@@ -1,7 +1,6 @@
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Badge } from "@/components/ui/Badge";
 import { CategoryAdminPanel } from "./CategoryAdminPanel";
 
 export default async function AdminCategoriesPage() {

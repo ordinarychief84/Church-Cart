@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Plus, Boxes } from "lucide-react";
 import { requireRole } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +8,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/shared/Money";
+import { ProductRowActions } from "./ProductRowActions";
 
 export default async function VendorProductsPage() {
   const user = await requireRole("VENDOR");
@@ -76,9 +78,11 @@ export default async function VendorProductsPage() {
             <li key={p.id} className="flex items-center justify-between gap-4 p-3">
               <div className="flex min-w-0 items-center gap-3">
                 {p.images[0] ? (
-                  <img src={p.images[0].url} alt="" className="h-12 w-12 rounded object-cover" />
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded bg-slate-100">
+                    <Image src={p.images[0].url} alt="" fill sizes="48px" className="object-cover" />
+                  </div>
                 ) : (
-                  <div className="h-12 w-12 rounded bg-slate-100" />
+                  <div className="h-12 w-12 shrink-0 rounded bg-slate-100" />
                 )}
                 <div className="min-w-0">
                   <Link href={`/vendor/products/${p.id}/edit`} className="block truncate font-medium hover:underline">
@@ -87,10 +91,13 @@ export default async function VendorProductsPage() {
                   <p className="text-xs text-slate-500">{p.category.name}</p>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <Money kobo={p.priceKobo} className="text-sm font-medium" />
-                <span className="text-xs text-slate-500">Stock: {p.inventoryQty}</span>
+              <div className="flex shrink-0 items-center gap-4">
+                <div className="text-right">
+                  <Money kobo={p.priceKobo} className="block text-sm font-medium" />
+                  <span className="text-xs text-slate-500">Stock: {p.inventoryQty}</span>
+                </div>
                 <Badge tone={p.available ? "success" : "neutral"}>{p.available ? "Live" : "Hidden"}</Badge>
+                <ProductRowActions productId={p.id} available={p.available} />
               </div>
             </li>
           ))}

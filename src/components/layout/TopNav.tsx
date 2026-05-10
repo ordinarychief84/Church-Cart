@@ -58,13 +58,21 @@ export async function TopNav() {
           )}
 
           {user ? (
-            <Link
-              href={ROLE_HOME[user.role]}
-              className="inline-flex items-center gap-2 rounded-md bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-800"
-            >
-              <UserIcon size={16} />
-              <span className="hidden sm:inline">{user.fullName.split(" ")[0]}</span>
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/account"
+                className="hidden rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 sm:inline-flex"
+              >
+                Account
+              </Link>
+              <Link
+                href={ROLE_HOME[user.role]}
+                className="inline-flex items-center gap-2 rounded-md bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-800"
+              >
+                <UserIcon size={16} />
+                <span className="hidden sm:inline">{user.fullName.split(" ")[0]}</span>
+              </Link>
+            </div>
           ) : (
             <Link
               href="/login"

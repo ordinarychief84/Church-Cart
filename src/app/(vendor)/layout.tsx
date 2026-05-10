@@ -8,6 +8,7 @@ const items: SidebarItem[] = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/vendor/products", label: "Products", icon: "Boxes" },
   { href: "/vendor/orders", label: "Orders", icon: "ListOrdered" },
+  { href: "/vendor/payouts", label: "Payouts", icon: "Wallet" },
   { href: "/vendor/settings", label: "Store settings", icon: "Settings" },
 ];
 
